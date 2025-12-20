@@ -2,7 +2,6 @@ import os
 import sys
 import pandas as pd
 
-# allow importing from /code
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "code")))
 
 from code.extract_stocks import extract_stocks, geocode_locations 
@@ -14,7 +13,7 @@ def test_extract_stocks_reads_csv_and_writes_cache(tmp_path):
     pd.DataFrame({"Ticker": ["AAA", "BBB"], "Marketcap": [10, 20]}).to_csv(source, index=False)
 
     cache_out = tmp_path / "stocks_raw.csv"
-    module.CACHE_STOCKS_FILE = str(cache_out)  # redirect output
+    module.CACHE_STOCKS_FILE = str(cache_out)  
 
     df = extract_stocks(source_file=str(source))
     assert len(df) == 2
