@@ -8,7 +8,7 @@ from code.extract_stocks import extract_stocks, geocode_locations
 import code.extract_stocks as module 
 
 
-def test_extract_stocks_reads_csv_and_writes_cache(tmp_path):
+def test_extract_cache(tmp_path):
     source = tmp_path / "stocks.csv"
     pd.DataFrame({"Ticker": ["AAA", "BBB"], "Marketcap": [10, 20]}).to_csv(source, index=False)
 
@@ -20,7 +20,7 @@ def test_extract_stocks_reads_csv_and_writes_cache(tmp_path):
     assert cache_out.exists()
 
 
-def test_geocode_locations_uses_cache_and_skips_api(tmp_path):
+def test_geocode_locations(tmp_path):
     cache_file = tmp_path / "locations.csv"
 
     pd.DataFrame([{
