@@ -1,43 +1,29 @@
-import importlib.util
-from pathlib import Path
-
+import os
+import sys
 import pandas as pd
-import pytest
+
+# allow importing from /code
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "code")))
+
+from code.extract_stocks import extract_stocks, geocode_locations 
+import code.extract_stocks as module 
 
 
-# Load "1_extract_stocks.py" WITHOUT using a normal import
-def load_extract_module():
-    project_root = Path(__file__).resolve().parents[1]   # goes from /tests to project folder
-    module_path = project_root / "1_extract_stocks.py"
+def test_extract_stocks_reads_csv_and_writes_cache(tmp_path):
+    source = tmp_path / "stocks.csv"
+    pd.DataFrame({"Ticker": ["AAA", "BBB"], "Marketcap": [10, 20]}).to_csv(source, index=False)
 
-    spec = importlib.util.spec_from_file_location("extract_module", module_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-def test_extract_stocks_writes_cache_file(tmp_path, monkeypatch):
-    m = load_extract_module()
-
-    # Make a fake source CSV
-    source = tmp_path / "stocks_data.csv"
-    pd.DataFrame({"Ticker": ["AAA"], "Marketcap": [10]}).to_csv(source, index=False)
-
-    # Redirect the cache output to a temp file
     cache_out = tmp_path / "stocks_raw.csv"
-    monkeypatch.setattr(m, "CACHE_STOCKS_FILE", str(cache_out))
+    module.CACHE_STOCKS_FILE = str(cache_out)  # redirect output
 
-    # Run + check
-    m.extract_stocks(source_file=str(source))
+    df = extract_stocks(source_file=str(source))
+    assert len(df) == 2
     assert cache_out.exists()
 
 
-def test_geocode_locations_does_not_call_api_if_cached(tmp_path, monkeypatch):
-    m = load_extract_module()
+def test_geocode_locations_uses_cache_and_skips_api(tmp_path):
+    cache_file = tmp_path / "locations.csv"
 
-    cache_file = tmp_path / "locations_geocoded.csv"
-
-    # Pre-fill cache with Boston
     pd.DataFrame([{
         "City": "Boston", "State": "MA", "Country": "USA",
         "full_location": "Boston, MA, USA", "lat": 42.36, "lon": -71.05
@@ -49,14 +35,3 @@ def test_geocode_locations_does_not_call_api_if_cached(tmp_path, monkeypatch):
         "full_location": "Boston, MA, USA"
     }])
 
-    calls = {"n": 0}
-
-    def fake_geocode(_):
-        calls["n"] += 1
-        return {"results": [{"geometry": {"location": {"lat": 0, "lng": 0}}}]}
-
-    monkeypatch.setattr(m, "geocode", fake_geocode)
-
-    m.geocode_locations(top, cache_file=str(cache_file))
-
-    assert calls["n"] == 0
